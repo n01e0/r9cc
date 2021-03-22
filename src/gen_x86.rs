@@ -87,6 +87,7 @@ fn argreg(r: usize, size: u8) -> &'static str {
 fn gen(f: Function) {
     use self::IROp::*;
     let ret = format!(".Lend{}", *LABEL.lock().unwrap());
+    let mut call_gadget_id: usize = 0;
     *LABEL.lock().unwrap() += 1;
 
     println!(".text");
@@ -108,7 +109,12 @@ fn gen(f: Function) {
             Mov => emit!("mov {}, {}", REGS[lhs], REGS[rhs]),
             Return => {
                 emit!("mov rax, {}", REGS[lhs]);
-                emit!("jmp {}", ret);
+                emit!("lea rsp, [rsp-8]");
+                emit!("push rax");
+                emit!("lea rax, {}", ret);
+                emit!("mov [rsp+8], rax");
+                emit!("pop rax");
+                emit!("ret");
             }
             Call(name, nargs, args) => {
                 for i in 0..nargs {
@@ -117,11 +123,20 @@ fn gen(f: Function) {
                 emit!("push r10");
                 emit!("push r11");
                 emit!("mov rax, 0");
-                emit!("call {}", name);
+                emit!("lea rsp, [rsp-16]");
+                emit!("push rax");
+                emit!("lea rax, {}", name);
+                emit!("mov [rsp+8], rax");
+                emit!("lea rax, .Lcall_gadget_{}_{}", f.name, call_gadget_id);
+                emit!("mov [rsp+16], rax");
+                emit!("pop rax");
+                emit!("ret");
+                println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
                 emit!("pop r11");
                 emit!("pop r10");
 
                 emit!("mov {}, rax", REGS[lhs]);
+                call_gadget_id += 1;
             }
             Label => println!(".L{}:", lhs),
             LabelAddr(name) => emit!("lea {}, {}", REGS[lhs], name),
@@ -151,7 +166,14 @@ fn gen(f: Function) {
                 emit!("div {}", REGS[rhs]);
                 emit!("mov {}, rdx", REGS[lhs]);
             }
-            Jmp => emit!("jmp .L{}", lhs),
+            Jmp => {
+                emit!("lea rsp, [rsp-8]");
+                emit!("push rax");
+                emit!("lea rax, [.L{}]", lhs);
+                emit!("mov [rsp+8], rax");
+                emit!("pop rax");
+                emit!("ret");
+            },
             If => {
                 emit!("cmp {}, 0", REGS[lhs]);
                 emit!("jne .L{}", rhs);
