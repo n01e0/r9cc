@@ -169,7 +169,7 @@ fn gen(f: Function) {
             Jmp => {
                 emit!("lea rsp, [rsp-8]");
                 emit!("push rax");
-                emit!("lea rax, [.L{}]", lhs);
+                emit!("lea rax, .L{}", lhs);
                 emit!("mov [rsp+8], rax");
                 emit!("pop rax");
                 emit!("ret");
