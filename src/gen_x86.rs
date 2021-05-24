@@ -86,6 +86,11 @@ fn argreg(r: usize, size: u8) -> &'static str {
 
 fn gen(f: Function) {
     use self::IROp::*;
+    let stacksize = if f.name == "main" {
+        roundup(f.stacksize + 8, 16)
+    } else {
+        roundup(f.stacksize, 16)
+    };
     let ret = format!(".Lend{}", *LABEL.lock().unwrap());
     let mut call_gadget_id: usize = 0;
     *LABEL.lock().unwrap() += 1;
@@ -95,11 +100,23 @@ fn gen(f: Function) {
     println!("{}:", f.name);
     emit!("push rbp");
     emit!("mov rbp, rsp");
-    emit!("sub rsp, {}", roundup(f.stacksize, 16));
+    emit!("sub rsp, {}", stacksize);
     emit!("push r12");
     emit!("push r13");
     emit!("push r14");
     emit!("push r15");
+    if f.name == "main" {
+        emit!("lea rax, [rbp-{}]", stacksize);
+        emit!("mov rsi, rax");
+        emit!("mov edi, 0x3001");
+        emit!("mov eax, 0x9e");
+        emit!("syscall");
+        emit!("mov eax, [rbp-{}]", stacksize);
+        emit!("mov esi, eax");
+        emit!("mov edi, 0x3002");
+        emit!("mov eax, 0x9e");
+        emit!("syscall");
+    }
 
     for ir in f.ir {
         let lhs = ir.lhs.unwrap();
