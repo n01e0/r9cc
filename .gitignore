@@ -1,6 +1,9 @@
 /target
 **/*.rs.bk
 
+/c_src
+/evaluation
+/examples
 *~
 *.o
 tmp*
