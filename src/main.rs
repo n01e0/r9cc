@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate clap;
 extern crate r9cc;
 
 use r9cc::gen_ir::gen_ir;
@@ -9,36 +11,18 @@ use r9cc::regalloc::alloc_regs;
 use r9cc::sema::sema;
 use r9cc::token::tokenize;
 
-use std::env;
-use std::process;
-
-fn usage() -> ! {
-    eprintln!("Usage: 9cc [-dump-ir1] [-dump-ir2] <file>");
-    process::exit(1)
-}
-
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() == 1 {
-        usage();
-    }
+    let yml = load_yaml!("cmd.yml");
+    let args = clap::App::from_yaml(yml).get_matches();
 
     let mut dump_ir1 = false;
     let mut dump_ir2 = false;
-    let path;
-
-    if args.len() == 3 && args[1] == "-dump-ir1" {
-        dump_ir1 = true;
-        path = args[2].clone();
-    } else if args.len() == 3 && args[1] == "-dump-ir2" {
-        dump_ir2 = true;
-        path = args[2].clone();
-    } else {
-        if args.len() != 2 {
-            usage();
-        }
-        path = args[1].clone();
+    if args.is_present("dump") {
+        dump_ir1 = args.value_of("dump").unwrap() == "1";
+        dump_ir2 = args.value_of("dump").unwrap() == "2";
     }
+    let path = args.value_of("path").unwrap().to_string();
+    let obfuscate_inst = args.values_of("inst").unwrap().collect::<Vec<_>>();
 
     // Tokenize and parse.
     let tokens = tokenize(path, &mut Preprocessor::new());
@@ -57,5 +41,5 @@ fn main() {
         dump_ir(&fns);
     }
 
-    gen_x86(globals, fns);
+    gen_x86(globals, fns, obfuscate_inst);
 }

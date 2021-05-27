@@ -1,0 +1,32 @@
+name: "rop9cc"
+version: "0.1.1"
+author: "utam0k <k0ma@utam0k.jp>, n01e0 <reoshiseki@gmail.com>"
+about: "r9cc rop"
+
+args:
+  - inst:
+      help: "obfuscate instruction"
+      short: i
+      long: instruction
+      required: false
+      takes_value: true
+      case_insensitive: true
+      multiple: true
+      possible_values:
+        - call
+        - jmp
+        - ret
+
+  - path:
+      help: "source file"
+      required: true
+      takes_value: true
+
+  - dump:
+      help: "dump ir"
+      short: d
+      long: dump
+      takes_value: true
+      possible_values:
+        - "1"
+        - "2"

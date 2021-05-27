@@ -84,7 +84,7 @@ fn argreg(r: usize, size: u8) -> &'static str {
     }
 }
 
-fn gen(f: Function) {
+fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
     use self::IROp::*;
     let ret = format!(".Lend{}", *LABEL.lock().unwrap());
     let mut call_gadget_id: usize = 0;
@@ -109,34 +109,42 @@ fn gen(f: Function) {
             Mov => emit!("mov {}, {}", REGS[lhs], REGS[rhs]),
             Return => {
                 emit!("mov rax, {}", REGS[lhs]);
-                emit!("lea rsp, [rsp-8]");
-                emit!("push rax");
-                emit!("lea rax, {}", ret);
-                emit!("mov [rsp+8], rax");
-                emit!("pop rax");
-                emit!("ret");
+                if obfuscate_inst.iter().any(|&i| i == "ret") {
+                    emit!("lea rsp, [rsp-8]");
+                    emit!("push rax");
+                    emit!("lea rax, {}", ret);
+                    emit!("mov [rsp+8], rax");
+                    emit!("pop rax");
+                    emit!("ret");
+                } else {
+                    emit!("jmp {}", ret);
+                }
             }
             Call(name, nargs, args) => {
-                for i in 0..nargs {
-                    emit!("mov {}, {}", ARGREGS[i], REGS[args[i]]);
+                    for i in 0..nargs {
+                        emit!("mov {}, {}", ARGREGS[i], REGS[args[i]]);
+                    }
+                    emit!("push r10");
+                    emit!("push r11");
+                    emit!("mov rax, 0");
+                if obfuscate_inst.iter().any(|&i| i == "call") {
+                    emit!("lea rsp, [rsp-16]");
+                    emit!("push rax");
+                    emit!("lea rax, {}", name);
+                    emit!("mov [rsp+8], rax");
+                    emit!("lea rax, .Lcall_gadget_{}_{}", f.name, call_gadget_id);
+                    emit!("mov [rsp+16], rax");
+                    emit!("pop rax");
+                    emit!("ret");
+                    println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
+                    call_gadget_id += 1;
+                } else {
+                    emit!("call {}", name);
                 }
-                emit!("push r10");
-                emit!("push r11");
-                emit!("mov rax, 0");
-                emit!("lea rsp, [rsp-16]");
-                emit!("push rax");
-                emit!("lea rax, {}", name);
-                emit!("mov [rsp+8], rax");
-                emit!("lea rax, .Lcall_gadget_{}_{}", f.name, call_gadget_id);
-                emit!("mov [rsp+16], rax");
-                emit!("pop rax");
-                emit!("ret");
-                println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
                 emit!("pop r11");
                 emit!("pop r10");
 
                 emit!("mov {}, rax", REGS[lhs]);
-                call_gadget_id += 1;
             }
             Label => println!(".L{}:", lhs),
             LabelAddr(name) => emit!("lea {}, {}", REGS[lhs], name),
@@ -167,12 +175,16 @@ fn gen(f: Function) {
                 emit!("mov {}, rdx", REGS[lhs]);
             }
             Jmp => {
-                emit!("lea rsp, [rsp-8]");
-                emit!("push rax");
-                emit!("lea rax, .L{}", lhs);
-                emit!("mov [rsp+8], rax");
-                emit!("pop rax");
-                emit!("ret");
+                if obfuscate_inst.iter().any(|&i| i == "jmp") {
+                    emit!("lea rsp, [rsp-8]");
+                    emit!("push rax");
+                    emit!("lea rax, .L{}", lhs);
+                    emit!("mov [rsp+8], rax");
+                    emit!("pop rax");
+                    emit!("ret");
+                } else {
+                    emit!("jmp .L{}", lhs);
+                }
             },
             If => {
                 emit!("cmp {}, 0", REGS[lhs]);
@@ -229,7 +241,7 @@ fn gen(f: Function) {
     emit!("ret");
 }
 
-pub fn gen_x86(globals: Vec<Var>, fns: Vec<Function>) {
+pub fn gen_x86(globals: Vec<Var>, fns: Vec<Function>, obfuscate_inst: Vec<&str>) {
     println!(".intel_syntax noprefix");
     println!(".data");
     for var in globals {
@@ -245,6 +257,6 @@ pub fn gen_x86(globals: Vec<Var>, fns: Vec<Function>) {
     }
 
     for f in fns {
-        gen(f);
+        gen(f, &obfuscate_inst);
     }
 }
