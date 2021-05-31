@@ -22,7 +22,11 @@ fn main() {
         dump_ir2 = args.value_of("dump").unwrap() == "2";
     }
     let path = args.value_of("path").unwrap().to_string();
-    let obfuscate_inst = args.values_of("inst").unwrap().collect::<Vec<_>>();
+    let obfuscate_inst = if let Some(inst) = args.values_of("inst") {
+        inst.collect::<Vec<_>>()
+    } else {
+        vec![]
+    };
 
     // Tokenize and parse.
     let tokens = tokenize(path, &mut Preprocessor::new());

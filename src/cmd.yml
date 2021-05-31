@@ -16,6 +16,9 @@ args:
         - call
         - jmp
         - ret
+        - imm
+        - mov
+        - lea
 
   - path:
       help: "source file"
