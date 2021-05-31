@@ -19,6 +19,7 @@ args:
         - imm
         - mov
         - lea
+        - cmp
 
   - path:
       help: "source file"

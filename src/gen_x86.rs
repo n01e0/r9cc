@@ -1,4 +1,4 @@
-use crate::gen_ir::{Function, IROp, IR};
+use crate::gen_ir::{Function, IROp};
 use crate::util::roundup;
 use crate::{Scope, Var, REGS_N};
 
@@ -56,14 +56,6 @@ fn backslash_escape(s: String, len: usize) -> String {
 macro_rules! emit{
     ($fmt:expr) => (print!(concat!("\t", $fmt, "\n")));
     ($fmt:expr, $($arg:tt)*) => (print!(concat!("\t", $fmt, "\n"), $($arg)*));
-}
-
-fn emit_cmp(ir: IR, insn: &'static str) {
-    let lhs = ir.lhs.unwrap();
-    let rhs = ir.rhs.unwrap();
-    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
-    emit!("{} {}", insn, REGS8[lhs]);
-    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
 }
 
 fn reg(r: usize, size: u8) -> &'static str {
@@ -214,10 +206,86 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                     emit!("neg {}", REGS[lhs]);
                 }
             },
-            EQ => emit_cmp(ir, "sete"),
-            NE => emit_cmp(ir, "setne"),
-            LT => emit_cmp(ir, "setl"),
-            LE => emit_cmp(ir, "setle"),
+            EQ => {
+                if obfuscate_inst.iter().any(|&i| i == "cmp")      {
+                    emit!("sub rsp, 0x10");
+                    emit!("push rax");
+                    emit!("lea rax, .Lgadget_sete_{}", REGS8[lhs]);
+                    emit!("mov [rsp+8], rax");
+                    emit!("lea rax, .Lcall_gadget_{}_{}", f.name, call_gadget_id);
+                    emit!("mov [rsp+0x10], rax");
+                    emit!("pop rax");
+                    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("ret");
+                    println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
+                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                    call_gadget_id += 1;
+                } else {
+                    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("sete {}", REGS8[lhs]);
+                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                }
+            }, 
+            NE => {
+                if obfuscate_inst.iter().any(|&i| i == "cmp")      {
+                    emit!("sub rsp, 0x10");
+                    emit!("push rax");
+                    emit!("lea rax, .Lgadget_setne_{}", REGS8[lhs]);
+                    emit!("mov [rsp+8], rax");
+                    emit!("lea rax, .Lcall_gadget_{}_{}", f.name, call_gadget_id);
+                    emit!("mov [rsp+0x10], rax");
+                    emit!("pop rax");
+                    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("ret");
+                    println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
+                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                    call_gadget_id += 1;
+                } else {
+                    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("setne {}", REGS8[lhs]);
+                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                }
+            },
+            LT => {
+                if obfuscate_inst.iter().any(|&i| i == "cmp")      {
+                    emit!("sub rsp, 0x10");
+                    emit!("push rax");
+                    emit!("lea rax, .Lgadget_setl_{}", REGS8[lhs]);
+                    emit!("mov [rsp+8], rax");
+                    emit!("lea rax, .Lcall_gadget_{}_{}", f.name, call_gadget_id);
+                    emit!("mov [rsp+0x10], rax");
+                    emit!("pop rax");
+                    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("ret");
+                    println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
+                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                    call_gadget_id += 1;
+                } else {
+                    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("setl {}", REGS8[lhs]);
+                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                }
+            },
+            LE => {
+                if obfuscate_inst.iter().any(|&i| i == "cmp")      {
+                    emit!("sub rsp, 0x10");
+                    emit!("push rax");
+                    emit!("lea rax, .Lgadget_setle_{}", REGS8[lhs]);
+                    emit!("mov [rsp+8], rax");
+                    emit!("lea rax, .Lcall_gadget_{}_{}", f.name, call_gadget_id);
+                    emit!("mov [rsp+0x10], rax");
+                    emit!("pop rax");
+                    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("ret");
+                    println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
+                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                    call_gadget_id += 1;
+                } else {
+                    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("setle {}", REGS8[lhs]);
+                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                }
+            },
             AND => emit!("and {}, {}", REGS[lhs], REGS[rhs]),
             OR => emit!("or {}, {}", REGS[lhs], REGS[rhs]),
             XOR => emit!("xor {}, {}", REGS[lhs], REGS[rhs]),
@@ -346,6 +414,25 @@ pub fn gen_x86(globals: Vec<Var>, fns: Vec<Function>, obfuscate_inst: Vec<&str>)
             emit!("neg {}", reg);
             emit!("ret");
         }
+    }
+
+    if obfuscate_inst.iter().any(|&i| i == "cmp") {
+        println!(".text");
+        for reg in REGS8.iter() {
+            println!(".Lgadget_sete_{}:", reg);
+            emit!("sete {}", reg);
+            emit!("ret");
+            println!(".Lgadget_setne_{}:", reg);
+            emit!("setne {}", reg);
+            emit!("ret");
+            println!(".Lgadget_setl_{}:", reg);
+            emit!("setl {}", reg);
+            emit!("ret");
+            println!(".Lgadget_setle_{}:", reg);
+            emit!("setle {}", reg);
+            emit!("ret");
+        }
+
     }
 
     for f in fns {
