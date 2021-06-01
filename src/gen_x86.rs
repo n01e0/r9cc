@@ -1,13 +1,34 @@
 use crate::gen_ir::{Function, IROp};
 use crate::util::roundup;
-use crate::emit;
 use crate::{Scope, Var, REGS_N};
-
-const REGS: [&str; REGS_N] = ["r10", "r11", "rbx", "r12", "r13", "r14", "r15"];
-const REGS8: [&str; REGS_N] = ["r10b", "r11b", "bl", "r12b", "r13b", "r14b", "r15b"];
-const REGS32: [&str; REGS_N] = ["r10d", "r11d", "ebx", "r12d", "r13d", "r14d", "r15d"];
+use crate::{
+    emit,
+    mov,
+    movzb,
+    lea,
+    sub,
+    add,
+    mul,
+    div,
+    neg,
+    cqo,
+    cmp,
+    shl,
+    shr,
+    push,
+    pop,
+    ret,
+    sete,
+    setne,
+    setl,
+    setle
+};
 
 use std::sync::Mutex;
+use std::fmt;
+
+const REGS8: [&str; REGS_N] = ["r10b", "r11b", "bl", "r12b", "r13b", "r14b", "r15b"];
+const REGS32: [&str; REGS_N] = ["r10d", "r11d", "ebx", "r12d", "r13d", "r14d", "r15d"];
 
 // Quoted from 9cc
 // > This pass generates x86-64 assembly from IR.
@@ -18,6 +39,37 @@ const ARGREGS32: [&str; 6] = ["edi", "esi", "edx", "ecx", "r8d", "r9d"];
 
 lazy_static! {
     static ref LABEL: Mutex<usize> = Mutex::new(0);
+}
+
+#[derive(Debug)]
+#[allow(non_camel_case_types)]
+enum REGS {
+    r10,
+    r11,
+    rbx,
+    r12,
+    r13,
+    r14,
+    r15
+}
+
+impl fmt::Display for REGS {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+fn regs(index: usize) -> &'static str {
+    match index {
+        0 => "r10",
+        1 => "r11",
+        2 => "rbx",
+        3 => "r12",
+        4 => "r13",
+        5 => "r14",
+        6 => "r15",
+        _ => panic!("index out of bounds")
+    }
 }
 
 fn backslash_escape(s: String, len: usize) -> String {
@@ -58,7 +110,7 @@ fn reg(r: usize, size: u8) -> &'static str {
     match size {
         1 => REGS8[r],
         4 => REGS32[r],
-        8 => REGS[r],
+        8 => regs(r),
         _ => unreachable!(),
     }
 }
@@ -97,7 +149,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                 if obfuscate_inst.iter().any(|&i| i == "imm" || i == "*") {
                     emit!("sub rsp, 0x18");
                     emit!("push rax");
-                    emit!("lea rax, .Lgadget_mov_{}", REGS[lhs]);
+                    emit!("lea rax, .Lgadget_mov_{}", regs(lhs));
                     emit!("mov [rsp+8], rax");
                     emit!("mov rax, {}", rhs as i32);
                     emit!("mov [rsp+0x10], rax");
@@ -108,16 +160,16 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
                     call_gadget_id += 1;
                 } else {
-                    emit!("mov {}, {}", REGS[lhs], rhs as i32)
+                    emit!("mov {}, {}", regs(lhs), rhs as i32)
                 }
             }
             Mov => {
                 if obfuscate_inst.iter().any(|&i| i == "mov" || i == "*") {
                     emit!("sub rsp, 0x18");
                     emit!("push rax");
-                    emit!("lea rax, .Lgadget_mov_{}", REGS[lhs]);
+                    emit!("lea rax, .Lgadget_mov_{}", regs(lhs));
                     emit!("mov [rsp+8], rax");
-                    emit!("mov [rsp+0x10], {}", REGS[rhs]);
+                    emit!("mov [rsp+0x10], {}", regs(rhs));
                     emit!("lea rax, .Lcall_gadget_{}_{}", f.name, call_gadget_id);
                     emit!("mov [rsp+0x18], rax");
                     emit!("pop rax");
@@ -125,11 +177,11 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
                     call_gadget_id += 1;
                 } else {
-                    emit!("mov {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("mov {}, {}", regs(lhs), regs(rhs));
                 }
             },
             Return => {
-                emit!("mov rax, {}", REGS[lhs]);
+                emit!("mov rax, {}", regs(lhs));
                 if obfuscate_inst.iter().any(|&i| i == "ret" || i == "*") {
                     emit!("lea rsp, [rsp-8]");
                     emit!("push rax");
@@ -143,7 +195,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
             }
             Call(name, nargs, args) => {
                 for i in 0..nargs {
-                    emit!("mov {}, {}", ARGREGS[i], REGS[args[i]]);
+                    emit!("mov {}, {}", ARGREGS[i], regs(args[i]));
                 }
                 emit!("push r10");
                 emit!("push r11");
@@ -165,14 +217,14 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                 emit!("pop r11");
                 emit!("pop r10");
 
-                emit!("mov {}, rax", REGS[lhs]);
+                emit!("mov {}, rax", regs(lhs));
             }
             Label => println!(".L{}:", lhs),
             LabelAddr(name) => {
                 if obfuscate_inst.iter().any(|&i| i == "lea" || i == "*") {
                     emit!("sub rsp, 0x18");
                     emit!("push rax");
-                    emit!("lea rax, .Lgadget_lea_{}", REGS[lhs]);
+                    emit!("lea rax, .Lgadget_lea_{}", regs(lhs));
                     emit!("mov [rsp+8], rax");
                     emit!("lea rax, {}", name);
                     emit!("mov [rsp+0x10], rax");
@@ -183,14 +235,14 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
                     call_gadget_id += 1;
                 } else {
-                    emit!("lea {}, {}", REGS[lhs], name);
+                    emit!("lea {}, {}", regs(lhs), name);
                 }
             },
             Neg => {
                 if obfuscate_inst.iter().any(|&i| i == "neg" || i == "*") {
                     emit!("sub rsp, 0x10");
                     emit!("push rax");
-                    emit!("lea rax, .Lgadget_neg_{}", REGS[lhs]);
+                    emit!("lea rax, .Lgadget_neg_{}", regs(lhs));
                     emit!("mov [rsp+8], rax");
                     emit!("lea rax, .Lcall_gadget_{}_{}", f.name, call_gadget_id);
                     emit!("mov [rsp+0x10], rax");
@@ -199,7 +251,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
                     call_gadget_id += 1;
                 } else  {
-                    emit!("neg {}", REGS[lhs]);
+                    emit!("neg {}", regs(lhs));
                 }
             },
             EQ => {
@@ -211,15 +263,15 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                     emit!("lea rax, .Lcall_gadget_{}_{}", f.name, call_gadget_id);
                     emit!("mov [rsp+0x10], rax");
                     emit!("pop rax");
-                    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("cmp {}, {}", regs(lhs), regs(rhs));
                     emit!("ret");
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
-                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                    emit!("movzb {}, {}", regs(lhs), REGS8[lhs]);
                     call_gadget_id += 1;
                 } else {
-                    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("cmp {}, {}", regs(lhs), regs(rhs));
                     emit!("sete {}", REGS8[lhs]);
-                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                    emit!("movzb {}, {}", regs(lhs), REGS8[lhs]);
                 }
             }, 
             NE => {
@@ -231,15 +283,15 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                     emit!("lea rax, .Lcall_gadget_{}_{}", f.name, call_gadget_id);
                     emit!("mov [rsp+0x10], rax");
                     emit!("pop rax");
-                    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("cmp {}, {}", regs(lhs), regs(rhs));
                     emit!("ret");
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
-                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                    emit!("movzb {}, {}", regs(lhs), REGS8[lhs]);
                     call_gadget_id += 1;
                 } else {
-                    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("cmp {}, {}", regs(lhs), regs(rhs));
                     emit!("setne {}", REGS8[lhs]);
-                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                    emit!("movzb {}, {}", regs(lhs), REGS8[lhs]);
                 }
             },
             LT => {
@@ -251,15 +303,15 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                     emit!("lea rax, .Lcall_gadget_{}_{}", f.name, call_gadget_id);
                     emit!("mov [rsp+0x10], rax");
                     emit!("pop rax");
-                    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("cmp {}, {}", regs(lhs), regs(rhs));
                     emit!("ret");
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
-                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                    emit!("movzb {}, {}", regs(lhs), REGS8[lhs]);
                     call_gadget_id += 1;
                 } else {
-                    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("cmp {}, {}", regs(lhs), regs(rhs));
                     emit!("setl {}", REGS8[lhs]);
-                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                    emit!("movzb {}, {}", regs(lhs), REGS8[lhs]);
                 }
             },
             LE => {
@@ -271,43 +323,43 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                     emit!("lea rax, .Lcall_gadget_{}_{}", f.name, call_gadget_id);
                     emit!("mov [rsp+0x10], rax");
                     emit!("pop rax");
-                    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("cmp {}, {}", regs(lhs), regs(rhs));
                     emit!("ret");
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
-                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                    emit!("movzb {}, {}", regs(lhs), REGS8[lhs]);
                     call_gadget_id += 1;
                 } else {
-                    emit!("cmp {}, {}", REGS[lhs], REGS[rhs]);
+                    emit!("cmp {}, {}", regs(lhs), regs(rhs));
                     emit!("setle {}", REGS8[lhs]);
-                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                    emit!("movzb {}, {}", regs(lhs), REGS8[lhs]);
                 }
             },
             AND => {
-                emit!("and {}, {}", REGS[lhs], REGS[rhs])
+                emit!("and {}, {}", regs(lhs), regs(rhs))
             },
             OR => {
-                emit!("or {}, {}", REGS[lhs], REGS[rhs])
+                emit!("or {}, {}", regs(lhs), regs(rhs))
             },
             XOR => {
-                emit!("xor {}, {}", REGS[lhs], REGS[rhs])
+                emit!("xor {}, {}", regs(lhs), regs(rhs))
             },
             SHL => {
                 emit!("mov cl, {}", REGS8[rhs]);
-                emit!("shl {}, cl", REGS[lhs]);
+                emit!("shl {}, cl", regs(lhs));
             }
             SHR => {
                 emit!("mov cl, {}", REGS8[rhs]);
-                emit!("shr {}, cl", REGS[lhs]);
+                emit!("shr {}, cl", regs(lhs));
             }
             Mod => {
                 /* Same meaning(?).
                  * emit!("mov rdx, 0");
-                 * emit!("mov rax, {}", REGS[lhs]);
+                 * emit!("mov rax, {}", regs(lhs]);
                  */
-                emit!("mov rax, {}", REGS[lhs]);
+                emit!("mov rax, {}", regs(lhs));
                 emit!("cqo"); // rax -> rdx:rax
-                emit!("div {}", REGS[rhs]);
-                emit!("mov {}, rdx", REGS[lhs]);
+                emit!("div {}", regs(rhs));
+                emit!("mov {}, rdx", regs(lhs));
             }
             Jmp => {
                 if obfuscate_inst.iter().any(|&i| i == "jmp" || i == "*") {
@@ -322,45 +374,45 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                 }
             }
             If => {
-                emit!("cmp {}, 0", REGS[lhs]);
+                emit!("cmp {}, 0", regs(lhs));
                 emit!("jne .L{}", rhs);
             }
             Unless => {
-                emit!("cmp {}, 0", REGS[lhs]);
+                emit!("cmp {}, 0", regs(lhs));
                 emit!("je .L{}", rhs);
             }
             Load(size) => {
-                emit!("mov {}, [{}]", reg(lhs, size), REGS[rhs]);
+                emit!("mov {}, [{}]", reg(lhs, size), regs(rhs));
                 if size == 1 {
-                    emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
+                    emit!("movzb {}, {}", regs(lhs), REGS8[lhs]);
                 }
             }
-            Store(size) => emit!("mov [{}], {}", REGS[lhs], reg(rhs, size)),
+            Store(size) => emit!("mov [{}], {}", regs(lhs), reg(rhs, size)),
             StoreArg(size) => emit!("mov [rbp-{}], {}", lhs, argreg(rhs, size)),
-            Add => emit!("add {}, {}", REGS[lhs], REGS[rhs]),
-            AddImm => emit!("add {}, {}", REGS[lhs], rhs as i32),
-            Sub => emit!("sub {}, {}", REGS[lhs], REGS[rhs]),
-            SubImm => emit!("sub {}, {}", REGS[lhs], rhs as i32),
-            Bprel => emit!("lea {}, [rbp-{}]", REGS[lhs], rhs),
+            Add => emit!("add {}, {}", regs(lhs), regs(rhs)),
+            AddImm => emit!("add {}, {}", regs(lhs), rhs as i32),
+            Sub => emit!("sub {}, {}", regs(lhs), regs(rhs)),
+            SubImm => emit!("sub {}, {}", regs(lhs), rhs as i32),
+            Bprel => emit!("lea {}, [rbp-{}]", regs(lhs), rhs),
             Mul => {
-                emit!("mov rax, {}", REGS[rhs]);
-                emit!("mul {}", REGS[lhs]);
-                emit!("mov {}, rax", REGS[lhs]);
+                emit!("mov rax, {}", regs(rhs));
+                emit!("mul {}", regs(lhs));
+                emit!("mov {}, rax", regs(lhs));
             }
             MulImm => {
                 if rhs < 256 && rhs.count_ones() == 1 {
-                    emit!("shl {}, {}", REGS[lhs], rhs.trailing_zeros());
+                    emit!("shl {}, {}", regs(lhs), rhs.trailing_zeros());
                 } else {
                     emit!("mov rax, {}", rhs as i32);
-                    emit!("mul {}", REGS[lhs]);
-                    emit!("mov {}, rax", REGS[lhs]);
+                    emit!("mul {}", regs(lhs));
+                    emit!("mov {}, rax", regs(lhs));
                 }
             }
             Div => {
-                emit!("mov rax, {}", REGS[lhs]);
+                emit!("mov rax, {}", regs(lhs));
                 emit!("cqo");
-                emit!("div {}", REGS[rhs]);
-                emit!("mov {}, rax", REGS[lhs]);
+                emit!("div {}", regs(rhs));
+                emit!("mov {}, rax", regs(lhs));
             }
             Nop | Kill => (),
         }
@@ -393,27 +445,27 @@ pub fn gen_x86(globals: Vec<Var>, fns: Vec<Function>, obfuscate_inst: Vec<&str>)
 
     if obfuscate_inst.iter().any(|&i| i == "imm"|| i == "mov" || i == "*") {
         println!(".text");
-        for reg in REGS.iter() {
-            println!(".Lgadget_mov_{}:", reg);
-            emit!("pop {}", reg);
+        for i in 0..REGS_N{
+            println!(".Lgadget_mov_{}:", regs(i));
+            emit!("pop {}", regs(i));
             emit!("ret");
         }
     }
 
     if obfuscate_inst.iter().any(|&i| i == "lea" || i == "*") {
         println!(".text");
-        for reg in REGS.iter() {
-            println!(".Lgadget_lea_{}:", reg);
-            emit!("pop {}", reg);
+        for i in 0..REGS_N {
+            println!(".Lgadget_lea_{}:", regs(i));
+            emit!("pop {}", regs(i));
             emit!("ret");
         }
     }
 
     if obfuscate_inst.iter().any(|&i| i == "neg" || i == "*") {
         println!(".text");
-        for reg in REGS.iter() {
-            println!(".Lgadget_neg_{}:", reg);
-            emit!("neg {}", reg);
+        for i in 0..REGS_N {
+            println!(".Lgadget_neg_{}:", regs(i));
+            emit!("neg {}", regs(i));
             emit!("ret");
         }
     }
