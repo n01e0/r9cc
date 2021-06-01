@@ -1,28 +1,6 @@
 use crate::gen_ir::{Function, IROp};
 use crate::util::roundup;
-use crate::{Scope, Var, REGS_N};
-use crate::{
-    emit,
-    mov,
-    movzb,
-    lea,
-    sub,
-    add,
-    mul,
-    div,
-    neg,
-    cqo,
-    cmp,
-    shl,
-    shr,
-    push,
-    pop,
-    ret,
-    sete,
-    setne,
-    setl,
-    setle
-};
+use crate::{Scope, Var, REGS_N, emit};
 
 use std::sync::Mutex;
 use std::fmt;
