@@ -1,5 +1,6 @@
 use crate::gen_ir::{Function, IROp};
 use crate::util::roundup;
+use crate::emit;
 use crate::{Scope, Var, REGS_N};
 
 const REGS: [&str; REGS_N] = ["r10", "r11", "rbx", "r12", "r13", "r14", "r15"];
@@ -53,11 +54,6 @@ fn backslash_escape(s: String, len: usize) -> String {
     sb
 }
 
-macro_rules! emit{
-    ($fmt:expr) => (print!(concat!("\t", $fmt, "\n")));
-    ($fmt:expr, $($arg:tt)*) => (print!(concat!("\t", $fmt, "\n"), $($arg)*));
-}
-
 fn reg(r: usize, size: u8) -> &'static str {
     match size {
         1 => REGS8[r],
@@ -98,7 +94,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
         let rhs = ir.rhs.unwrap_or(0);
         match ir.op {
             Imm => {
-                if obfuscate_inst.iter().any(|&i| i == "imm") {
+                if obfuscate_inst.iter().any(|&i| i == "imm" || i == "*") {
                     emit!("sub rsp, 0x18");
                     emit!("push rax");
                     emit!("lea rax, .Lgadget_mov_{}", REGS[lhs]);
@@ -116,7 +112,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                 }
             }
             Mov => {
-                if obfuscate_inst.iter().any(|&i| i == "mov") {
+                if obfuscate_inst.iter().any(|&i| i == "mov" || i == "*") {
                     emit!("sub rsp, 0x18");
                     emit!("push rax");
                     emit!("lea rax, .Lgadget_mov_{}", REGS[lhs]);
@@ -134,7 +130,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
             },
             Return => {
                 emit!("mov rax, {}", REGS[lhs]);
-                if obfuscate_inst.iter().any(|&i| i == "ret") {
+                if obfuscate_inst.iter().any(|&i| i == "ret" || i == "*") {
                     emit!("lea rsp, [rsp-8]");
                     emit!("push rax");
                     emit!("lea rax, {}", ret);
@@ -152,7 +148,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                 emit!("push r10");
                 emit!("push r11");
                 emit!("mov rax, 0");
-                if obfuscate_inst.iter().any(|&i| i == "call") {
+                if obfuscate_inst.iter().any(|&i| i == "call" || i == "*") {
                     emit!("lea rsp, [rsp-0x10]");
                     emit!("push rax");
                     emit!("lea rax, {}", name);
@@ -173,7 +169,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
             }
             Label => println!(".L{}:", lhs),
             LabelAddr(name) => {
-                if obfuscate_inst.iter().any(|&i| i == "lea") {
+                if obfuscate_inst.iter().any(|&i| i == "lea" || i == "*") {
                     emit!("sub rsp, 0x18");
                     emit!("push rax");
                     emit!("lea rax, .Lgadget_lea_{}", REGS[lhs]);
@@ -191,7 +187,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                 }
             },
             Neg => {
-                if obfuscate_inst.iter().any(|&i| i == "neg") {
+                if obfuscate_inst.iter().any(|&i| i == "neg" || i == "*") {
                     emit!("sub rsp, 0x10");
                     emit!("push rax");
                     emit!("lea rax, .Lgadget_neg_{}", REGS[lhs]);
@@ -207,7 +203,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                 }
             },
             EQ => {
-                if obfuscate_inst.iter().any(|&i| i == "cmp")      {
+                if obfuscate_inst.iter().any(|&i| i == "cmp" || i == "*")      {
                     emit!("sub rsp, 0x10");
                     emit!("push rax");
                     emit!("lea rax, .Lgadget_sete_{}", REGS8[lhs]);
@@ -227,7 +223,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                 }
             }, 
             NE => {
-                if obfuscate_inst.iter().any(|&i| i == "cmp")      {
+                if obfuscate_inst.iter().any(|&i| i == "cmp" || i == "*")      {
                     emit!("sub rsp, 0x10");
                     emit!("push rax");
                     emit!("lea rax, .Lgadget_setne_{}", REGS8[lhs]);
@@ -247,7 +243,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                 }
             },
             LT => {
-                if obfuscate_inst.iter().any(|&i| i == "cmp")      {
+                if obfuscate_inst.iter().any(|&i| i == "cmp" || i == "*")      {
                     emit!("sub rsp, 0x10");
                     emit!("push rax");
                     emit!("lea rax, .Lgadget_setl_{}", REGS8[lhs]);
@@ -267,7 +263,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                 }
             },
             LE => {
-                if obfuscate_inst.iter().any(|&i| i == "cmp")      {
+                if obfuscate_inst.iter().any(|&i| i == "cmp" || i == "*")      {
                     emit!("sub rsp, 0x10");
                     emit!("push rax");
                     emit!("lea rax, .Lgadget_setle_{}", REGS8[lhs]);
@@ -286,9 +282,15 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                     emit!("movzb {}, {}", REGS[lhs], REGS8[lhs]);
                 }
             },
-            AND => emit!("and {}, {}", REGS[lhs], REGS[rhs]),
-            OR => emit!("or {}, {}", REGS[lhs], REGS[rhs]),
-            XOR => emit!("xor {}, {}", REGS[lhs], REGS[rhs]),
+            AND => {
+                emit!("and {}, {}", REGS[lhs], REGS[rhs])
+            },
+            OR => {
+                emit!("or {}, {}", REGS[lhs], REGS[rhs])
+            },
+            XOR => {
+                emit!("xor {}, {}", REGS[lhs], REGS[rhs])
+            },
             SHL => {
                 emit!("mov cl, {}", REGS8[rhs]);
                 emit!("shl {}, cl", REGS[lhs]);
@@ -308,7 +310,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                 emit!("mov {}, rdx", REGS[lhs]);
             }
             Jmp => {
-                if obfuscate_inst.iter().any(|&i| i == "jmp") {
+                if obfuscate_inst.iter().any(|&i| i == "jmp" || i == "*") {
                     emit!("lea rsp, [rsp-8]");
                     emit!("push rax");
                     emit!("lea rax, .L{}", lhs);
@@ -389,7 +391,7 @@ pub fn gen_x86(globals: Vec<Var>, fns: Vec<Function>, obfuscate_inst: Vec<&str>)
         unreachable!();
     }
 
-    if obfuscate_inst.iter().any(|&i| i == "imm"|| i == "mov") {
+    if obfuscate_inst.iter().any(|&i| i == "imm"|| i == "mov" || i == "*") {
         println!(".text");
         for reg in REGS.iter() {
             println!(".Lgadget_mov_{}:", reg);
@@ -398,7 +400,7 @@ pub fn gen_x86(globals: Vec<Var>, fns: Vec<Function>, obfuscate_inst: Vec<&str>)
         }
     }
 
-    if obfuscate_inst.iter().any(|&i| i == "lea") {
+    if obfuscate_inst.iter().any(|&i| i == "lea" || i == "*") {
         println!(".text");
         for reg in REGS.iter() {
             println!(".Lgadget_lea_{}:", reg);
@@ -407,7 +409,7 @@ pub fn gen_x86(globals: Vec<Var>, fns: Vec<Function>, obfuscate_inst: Vec<&str>)
         }
     }
 
-    if obfuscate_inst.iter().any(|&i| i == "neg") {
+    if obfuscate_inst.iter().any(|&i| i == "neg" || i == "*") {
         println!(".text");
         for reg in REGS.iter() {
             println!(".Lgadget_neg_{}:", reg);
@@ -416,7 +418,7 @@ pub fn gen_x86(globals: Vec<Var>, fns: Vec<Function>, obfuscate_inst: Vec<&str>)
         }
     }
 
-    if obfuscate_inst.iter().any(|&i| i == "cmp") {
+    if obfuscate_inst.iter().any(|&i| i == "cmp" || i == "*") {
         println!(".text");
         for reg in REGS8.iter() {
             println!(".Lgadget_sete_{}:", reg);

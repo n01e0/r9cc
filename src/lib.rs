@@ -6,6 +6,7 @@ pub mod preprocess;
 pub mod regalloc;
 pub mod sema;
 pub mod token;
+#[macro_use]
 mod util;
 
 #[macro_use]
