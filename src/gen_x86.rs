@@ -1,18 +1,12 @@
 use crate::gen_ir::{Function, IROp};
 use crate::util::roundup;
-use crate::{Scope, Var, REGS_N, emit};
+use crate::{emit, Scope, Var, REGS_N};
 
-use std::sync::Mutex;
 use std::fmt;
-
-const REGS32: [&str; REGS_N] = ["r10d", "r11d", "ebx", "r12d", "r13d", "r14d", "r15d"];
+use std::sync::Mutex;
 
 // Quoted from 9cc
 // > This pass generates x86-64 assembly from IR.
-
-const ARGREGS: [&str; 6] = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
-const ARGREGS8: [&str; 6] = ["dil", "sil", "dl", "cl", "r8b", "r9b"];
-const ARGREGS32: [&str; 6] = ["edi", "esi", "edx", "ecx", "r8d", "r9d"];
 
 lazy_static! {
     static ref LABEL: Mutex<usize> = Mutex::new(0);
@@ -27,7 +21,7 @@ enum REGS {
     r12,
     r13,
     r14,
-    r15
+    r15,
 }
 
 impl fmt::Display for REGS {
@@ -45,7 +39,7 @@ fn regs(index: usize) -> &'static str {
         4 => "r13",
         5 => "r14",
         6 => "r15",
-        _ => panic!("index out of bounds")
+        _ => panic!("index out of bounds"),
     }
 }
 
@@ -58,7 +52,7 @@ enum REGS8 {
     r12b,
     r13b,
     r14b,
-    r15b
+    r15b,
 }
 
 impl fmt::Display for REGS8 {
@@ -76,7 +70,7 @@ fn regs8(index: usize) -> &'static str {
         4 => "r13b",
         5 => "r14b",
         6 => "r15b",
-        _ => panic!("index out of bounds")
+        _ => panic!("index out of bounds"),
     }
 }
 
@@ -89,7 +83,7 @@ enum REGS32 {
     r12d,
     r13d,
     r14d,
-    r15d
+    r15d,
 }
 
 impl fmt::Display for REGS32 {
@@ -107,7 +101,94 @@ fn regs32(index: usize) -> &'static str {
         4 => "r13d",
         5 => "r14d",
         6 => "r15d",
-        _ => panic!("index out of bounds")
+        _ => panic!("index out of bounds"),
+    }
+}
+
+#[derive(Debug)]
+#[allow(non_camel_case_types)]
+enum ARGREGS {
+    rdi,
+    rsi,
+    rdx,
+    rcx,
+    r8,
+    r9,
+}
+
+impl fmt::Display for ARGREGS {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+fn argregs(index: usize) -> &'static str {
+    match index {
+        0 => "rdi",
+        1 => "rsi",
+        2 => "rdx",
+        3 => "rcx",
+        4 => "r8",
+        5 => "r9",
+        _ => panic!("index out of bounds"),
+    }
+}
+
+#[derive(Debug)]
+#[allow(non_camel_case_types)]
+enum ARGREGS8 {
+    dil,
+    sil,
+    dl,
+    cl,
+    r8b,
+    r9b,
+}
+
+impl fmt::Display for ARGREGS8 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+fn argregs8(index: usize) -> &'static str {
+    match index {
+        0 => "dil",
+        1 => "dsil",
+        2 => "ddl",
+        3 => "dcl",
+        4 => "dr8b",
+        5 => "dr9b",
+        _ => panic!("index out of bounds"),
+    }
+}
+
+#[derive(Debug)]
+#[allow(non_camel_case_types)]
+enum ARGREGS32 {
+    edi,
+    esi,
+    edx,
+    ecx,
+    r8d,
+    r9d,
+}
+
+impl fmt::Display for ARGREGS32 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+fn argregs32(index: usize) -> &'static str {
+    match index {
+        0 => "edi",
+        1 => "esi",
+        2 => "edx",
+        3 => "ecx",
+        4 => "r8d",
+        5 => "r9d",
+        _ => panic!("index out of bounds"),
     }
 }
 
@@ -153,12 +234,11 @@ fn reg(r: usize, size: u8) -> &'static str {
         _ => unreachable!(),
     }
 }
-
 fn argreg(r: usize, size: u8) -> &'static str {
     match size {
-        1 => ARGREGS8[r],
-        4 => ARGREGS32[r],
-        8 => ARGREGS[r],
+        1 => argregs8(r),
+        4 => argregs32(r),
+        8 => argregs(r),
         _ => unreachable!(),
     }
 }
@@ -218,7 +298,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                 } else {
                     emit!("mov {}, {}", regs(lhs), regs(rhs));
                 }
-            },
+            }
             Return => {
                 emit!("mov rax, {}", regs(lhs));
                 if obfuscate_inst.iter().any(|&i| i == "ret" || i == "*") {
@@ -234,7 +314,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
             }
             Call(name, nargs, args) => {
                 for i in 0..nargs {
-                    emit!("mov {}, {}", ARGREGS[i], regs(args[i]));
+                    emit!("mov {}, {}", argregs(i), regs(args[i]));
                 }
                 emit!("push r10");
                 emit!("push r11");
@@ -276,7 +356,7 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                 } else {
                     emit!("lea {}, {}", regs(lhs), name);
                 }
-            },
+            }
             Neg => {
                 if obfuscate_inst.iter().any(|&i| i == "neg" || i == "*") {
                     emit!("sub rsp, 0x10");
@@ -289,12 +369,12 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                     emit!("ret");
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
                     call_gadget_id += 1;
-                } else  {
+                } else {
                     emit!("neg {}", regs(lhs));
                 }
-            },
+            }
             EQ => {
-                if obfuscate_inst.iter().any(|&i| i == "cmp" || i == "*")      {
+                if obfuscate_inst.iter().any(|&i| i == "cmp" || i == "*") {
                     emit!("sub rsp, 0x10");
                     emit!("push rax");
                     emit!("lea rax, .Lgadget_sete_{}", regs8(lhs));
@@ -312,9 +392,9 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                     emit!("sete {}", regs8(lhs));
                     emit!("movzb {}, {}", regs(lhs), regs8(lhs));
                 }
-            }, 
+            }
             NE => {
-                if obfuscate_inst.iter().any(|&i| i == "cmp" || i == "*")      {
+                if obfuscate_inst.iter().any(|&i| i == "cmp" || i == "*") {
                     emit!("sub rsp, 0x10");
                     emit!("push rax");
                     emit!("lea rax, .Lgadget_setne_{}", regs8(lhs));
@@ -332,9 +412,9 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                     emit!("setne {}", regs8(lhs));
                     emit!("movzb {}, {}", regs(lhs), regs8(lhs));
                 }
-            },
+            }
             LT => {
-                if obfuscate_inst.iter().any(|&i| i == "cmp" || i == "*")      {
+                if obfuscate_inst.iter().any(|&i| i == "cmp" || i == "*") {
                     emit!("sub rsp, 0x10");
                     emit!("push rax");
                     emit!("lea rax, .Lgadget_setl_{}", regs8(lhs));
@@ -352,9 +432,9 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                     emit!("setl {}", regs8(lhs));
                     emit!("movzb {}, {}", regs(lhs), regs8(lhs));
                 }
-            },
+            }
             LE => {
-                if obfuscate_inst.iter().any(|&i| i == "cmp" || i == "*")      {
+                if obfuscate_inst.iter().any(|&i| i == "cmp" || i == "*") {
                     emit!("sub rsp, 0x10");
                     emit!("push rax");
                     emit!("lea rax, .Lgadget_setle_{}", regs8(lhs));
@@ -372,16 +452,16 @@ fn gen(f: Function, obfuscate_inst: &Vec<&str>) {
                     emit!("setle {}", regs8(lhs));
                     emit!("movzb {}, {}", regs(lhs), regs8(lhs));
                 }
-            },
+            }
             AND => {
                 emit!("and {}, {}", regs(lhs), regs(rhs))
-            },
+            }
             OR => {
                 emit!("or {}, {}", regs(lhs), regs(rhs))
-            },
+            }
             XOR => {
                 emit!("xor {}, {}", regs(lhs), regs(rhs))
-            },
+            }
             SHL => {
                 emit!("mov cl, {}", regs8(rhs));
                 emit!("shl {}, cl", regs(lhs));
@@ -482,9 +562,12 @@ pub fn gen_x86(globals: Vec<Var>, fns: Vec<Function>, obfuscate_inst: Vec<&str>)
         unreachable!();
     }
 
-    if obfuscate_inst.iter().any(|&i| i == "imm"|| i == "mov" || i == "*") {
+    if obfuscate_inst
+        .iter()
+        .any(|&i| i == "imm" || i == "mov" || i == "*")
+    {
         println!(".text");
-        for i in 0..REGS_N{
+        for i in 0..REGS_N {
             println!(".Lgadget_mov_{}:", regs(i));
             emit!("pop {}", regs(i));
             emit!("ret");
@@ -525,7 +608,6 @@ pub fn gen_x86(globals: Vec<Var>, fns: Vec<Function>, obfuscate_inst: Vec<&str>)
             emit!("setle {}", regs8(i));
             emit!("ret");
         }
-
     }
 
     for f in fns {
