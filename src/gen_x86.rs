@@ -412,7 +412,11 @@ fn gen(f: Function, obfuscate_inst: &ObfuscateInst) {
             }
             Neg => {
                 if obfuscate_inst.neg {
-                    rop_enter(format!(".Lgadget_neg_{}", regs(lhs)), &f.name, call_gadget_id);
+                    rop_enter(
+                        format!(".Lgadget_neg_{}", regs(lhs)),
+                        &f.name,
+                        call_gadget_id,
+                    );
                     emit!("ret");
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
                     call_gadget_id += 1;
@@ -422,7 +426,11 @@ fn gen(f: Function, obfuscate_inst: &ObfuscateInst) {
             }
             EQ => {
                 if obfuscate_inst.cmp {
-                    rop_enter(format!(".Lgadget_sete_{}", regs8(lhs)), &f.name, call_gadget_id);
+                    rop_enter(
+                        format!(".Lgadget_sete_{}", regs8(lhs)),
+                        &f.name,
+                        call_gadget_id,
+                    );
                     emit!("cmp {}, {}", regs(lhs), regs(rhs));
                     emit!("ret");
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
@@ -436,7 +444,11 @@ fn gen(f: Function, obfuscate_inst: &ObfuscateInst) {
             }
             NE => {
                 if obfuscate_inst.cmp {
-                    rop_enter(format!(".Lgadget_setne_{}", regs8(lhs)), &f.name, call_gadget_id);
+                    rop_enter(
+                        format!(".Lgadget_setne_{}", regs8(lhs)),
+                        &f.name,
+                        call_gadget_id,
+                    );
 
                     emit!("cmp {}, {}", regs(lhs), regs(rhs));
                     emit!("ret");
@@ -451,7 +463,11 @@ fn gen(f: Function, obfuscate_inst: &ObfuscateInst) {
             }
             LT => {
                 if obfuscate_inst.cmp {
-                    rop_enter(format!(".Lgadget_setl_{}", regs8(lhs)), &f.name, call_gadget_id);
+                    rop_enter(
+                        format!(".Lgadget_setl_{}", regs8(lhs)),
+                        &f.name,
+                        call_gadget_id,
+                    );
 
                     emit!("cmp {}, {}", regs(lhs), regs(rhs));
                     emit!("ret");
@@ -466,7 +482,11 @@ fn gen(f: Function, obfuscate_inst: &ObfuscateInst) {
             }
             LE => {
                 if obfuscate_inst.cmp {
-                    rop_enter(format!(".Lgadget_setle_{}", regs8(lhs)), &f.name, call_gadget_id);
+                    rop_enter(
+                        format!(".Lgadget_setle_{}", regs8(lhs)),
+                        &f.name,
+                        call_gadget_id,
+                    );
                     emit!("cmp {}, {}", regs(lhs), regs(rhs));
                     emit!("ret");
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
@@ -480,7 +500,11 @@ fn gen(f: Function, obfuscate_inst: &ObfuscateInst) {
             }
             AND => {
                 if obfuscate_inst.and {
-                    rop_enter(format!(".Lgaget_and_{}_{}", regs(lhs), regs(rhs)), &f.name, call_gadget_id);
+                    rop_enter(
+                        format!(".Lgaget_and_{}_{}", regs(lhs), regs(rhs)),
+                        &f.name,
+                        call_gadget_id,
+                    );
                     emit!("ret");
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
                     call_gadget_id += 1;
@@ -490,7 +514,11 @@ fn gen(f: Function, obfuscate_inst: &ObfuscateInst) {
             }
             OR => {
                 if obfuscate_inst.or {
-                    rop_enter(format!(".Lgadget_or_{}_{}", regs(lhs), regs(rhs)), &f.name, call_gadget_id);
+                    rop_enter(
+                        format!(".Lgadget_or_{}_{}", regs(lhs), regs(rhs)),
+                        &f.name,
+                        call_gadget_id,
+                    );
                     emit!("ret");
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
                     call_gadget_id += 1;
@@ -500,7 +528,11 @@ fn gen(f: Function, obfuscate_inst: &ObfuscateInst) {
             }
             XOR => {
                 if obfuscate_inst.xor {
-                    rop_enter(format!(".Lgadget_xor_{}_{}", regs(lhs), regs(rhs)), &f.name, call_gadget_id);
+                    rop_enter(
+                        format!(".Lgadget_xor_{}_{}", regs(lhs), regs(rhs)),
+                        &f.name,
+                        call_gadget_id,
+                    );
                     emit!("ret");
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
                     call_gadget_id += 1;
@@ -511,7 +543,11 @@ fn gen(f: Function, obfuscate_inst: &ObfuscateInst) {
             SHL => {
                 emit!("mov cl, {}", regs8(rhs));
                 if obfuscate_inst.shift {
-                    rop_enter(format!(".Lgadget_shl_{}", regs(lhs)), &f.name, call_gadget_id);
+                    rop_enter(
+                        format!(".Lgadget_shl_{}", regs(lhs)),
+                        &f.name,
+                        call_gadget_id,
+                    );
                     emit!("ret");
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
                     call_gadget_id += 1;
@@ -522,7 +558,11 @@ fn gen(f: Function, obfuscate_inst: &ObfuscateInst) {
             SHR => {
                 emit!("mov cl, {}", regs8(rhs));
                 if obfuscate_inst.shift {
-                    rop_enter(format!(".Lgadget_shr_{}", regs(lhs)), &f.name, call_gadget_id);
+                    rop_enter(
+                        format!(".Lgadget_shr_{}", regs(lhs)),
+                        &f.name,
+                        call_gadget_id,
+                    );
                     emit!("ret");
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
                     call_gadget_id += 1;
@@ -537,7 +577,11 @@ fn gen(f: Function, obfuscate_inst: &ObfuscateInst) {
                  */
                 emit!("mov rax, {}", regs(lhs));
                 if obfuscate_inst.mod_ {
-                    rop_enter(format!(".Lgadget_mod_{}_{}", regs(lhs), regs(rhs)), &f.name, call_gadget_id);
+                    rop_enter(
+                        format!(".Lgadget_mod_{}_{}", regs(lhs), regs(rhs)),
+                        &f.name,
+                        call_gadget_id,
+                    );
                     emit!("ret");
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
                     call_gadget_id += 1;
@@ -568,21 +612,36 @@ fn gen(f: Function, obfuscate_inst: &ObfuscateInst) {
                 emit!("je .L{}", rhs);
             }
             Load(size) => {
-                emit!("mov {}, [{}]", reg(lhs, size), regs(rhs));
-                if size == 1 {
-                    emit!("movzb {}, {}", regs(lhs), regs8(lhs));
+                if obfuscate_inst.mov {
+                    rop_enter(
+                        format!(".Lgadget_load_{}_{}", reg(lhs, size), regs(rhs)),
+                        &f.name,
+                        call_gadget_id,
+                    );
+                    emit!("ret");
+                    println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
+                    call_gadget_id += 1;
+                } else {
+                    emit!("mov {}, [{}]", reg(lhs, size), regs(rhs));
+                    if size == 1 {
+                        emit!("movzb {}, {}", regs(lhs), regs8(lhs));
+                    }
                 }
             }
             Store(size) => {
                 if obfuscate_inst.mov {
-                    rop_enter(format!(".Lgadget_store_{}_{}", regs(lhs), reg(rhs, size)), &f.name, call_gadget_id);
+                    rop_enter(
+                        format!(".Lgadget_store_{}_{}", regs(lhs), reg(rhs, size)),
+                        &f.name,
+                        call_gadget_id,
+                    );
                     emit!("ret");
                     println!(".Lcall_gadget_{}_{}:", f.name, call_gadget_id);
                     call_gadget_id += 1;
                 } else {
                     emit!("mov [{}], {}", regs(lhs), reg(rhs, size))
                 }
-            },
+            }
             StoreArg(size) => emit!("mov [rbp-{}], {}", lhs, argreg(rhs, size)),
             Add => emit!("add {}, {}", regs(lhs), regs(rhs)),
             AddImm => emit!("add {}, {}", regs(lhs), rhs as i32),
@@ -660,6 +719,21 @@ pub fn gen_x86(globals: Vec<Var>, fns: Vec<Function>, obfuscate_inst: Vec<&str>)
                 emit!("ret");
                 println!(".Lgadget_store_{}_{}:", regs(i), regs8(j));
                 emit!("mov [{}], {}", regs(i), regs8(j));
+                emit!("ret");
+            }
+        }
+
+        for i in 0..REGS_N {
+            for j in 0..REGS_N {
+                println!(".Lgadget_load_{}_{}:", regs(i), regs(j));
+                emit!("mov {}, [{}]", regs(i), regs(j));
+                emit!("ret");
+                println!(".Lgadget_load_{}_{}:", regs32(i), regs(j));
+                emit!("mov {}, [{}]", regs32(i), regs(j));
+                emit!("ret");
+                println!(".Lgadget_load_{}_{}:", regs8(i), regs(j));
+                emit!("mov {}, [{}]", regs8(i), regs(j));
+                emit!("movzb {}, {}", regs(i), regs8(i));
                 emit!("ret");
             }
         }
@@ -750,7 +824,7 @@ pub fn gen_x86(globals: Vec<Var>, fns: Vec<Function>, obfuscate_inst: Vec<&str>)
             }
         }
     }
-    
+
     for f in fns {
         gen(f, &oi);
     }
