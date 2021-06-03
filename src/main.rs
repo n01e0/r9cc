@@ -15,12 +15,20 @@ fn main() {
     let yml = load_yaml!("cmd.yml");
     let args = clap::App::from_yaml(yml).get_matches();
 
-    let mut dump_ir1 = false;
-    let mut dump_ir2 = false;
-    if args.is_present("dump") {
-        dump_ir1 = args.value_of("dump").unwrap() == "1";
-        dump_ir2 = args.value_of("dump").unwrap() == "2";
-    }
+    let dump_ir1 = args.is_present("dump")
+        && args
+            .values_of("dump")
+            .unwrap()
+            .collect::<Vec<_>>()
+            .iter()
+            .any(|&i| i == "1");
+    let dump_ir2 = args.is_present("dump")
+        && args
+            .values_of("dump")
+            .unwrap()
+            .collect::<Vec<_>>()
+            .iter()
+            .any(|&i| i == "2");
     let path = args.value_of("path").unwrap().to_string();
     let obfuscate_inst = if let Some(inst) = args.values_of("inst") {
         inst.collect::<Vec<_>>()

@@ -20,6 +20,12 @@ args:
         - mov
         - lea
         - cmp
+        - neg
+        - and
+        - or
+        - xor
+        - shift
+        - mod
         - "*"
 
   - path:
