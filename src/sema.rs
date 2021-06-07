@@ -327,10 +327,10 @@ fn walk(mut node: Node, decay: bool) -> Node {
                 if let Ctype::Func(returning) = var.ty.ty {
                     node.ty = returning;
                 } else {
-                    eprint!("bad function: {}", name);
+                    eprintln!("bad function: {}", name);
                 }
             } else {
-                eprint!("bad function: {}", name);
+                eprintln!("bad function: {}", name);
             }
 
             args = args.into_iter().map(|arg| walk(arg, true)).collect();

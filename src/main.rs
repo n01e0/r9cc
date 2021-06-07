@@ -52,6 +52,8 @@ fn main() {
     if dump_ir2 {
         dump_ir(&fns);
     }
-
-    gen_x86(globals, fns, obfuscate_inst);
+    
+    if !dump_ir1 && !dump_ir2 {
+        gen_x86(globals, fns, obfuscate_inst);
+    }
 }
