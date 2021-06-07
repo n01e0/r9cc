@@ -4,6 +4,11 @@ author: "utam0k <k0ma@utam0k.jp>, n01e0 <reoshiseki@gmail.com>"
 about: "r9cc rop"
 
 args:
+  - path:
+      help: "source file"
+      required: true
+      takes_value: true
+
   - inst:
       help: "obfuscate instruction"
       short: i
@@ -25,13 +30,9 @@ args:
         - xor
         - shift
         - mod
+        - all
         - "*"
-
-  - path:
-      help: "source file"
-      required: true
-      takes_value: true
-
+  
   - dump:
       help: "dump ir"
       short: d

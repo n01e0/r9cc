@@ -30,18 +30,18 @@ struct ObfuscateInst {
 impl ObfuscateInst {
     pub fn from(v: Vec<&str>) -> Self {
         ObfuscateInst {
-            call: v.iter().any(|&i| i == "call" || i == "*"),
-            jmp: v.iter().any(|&i| i == "jmp" || i == "*"),
-            ret: v.iter().any(|&i| i == "ret" || i == "*"),
-            mov: v.iter().any(|&i| i == "mov" || i == "*"),
-            lea: v.iter().any(|&i| i == "lea" || i == "*"),
-            cmp: v.iter().any(|&i| i == "cmp" || i == "*"),
-            neg: v.iter().any(|&i| i == "neg" || i == "*"),
-            and: v.iter().any(|&i| i == "and" || i == "*"),
-            or: v.iter().any(|&i| i == "or" || i == "*"),
-            xor: v.iter().any(|&i| i == "xor" || i == "*"),
-            shift: v.iter().any(|&i| i == "shift" || i == "*"),
-            mod_: v.iter().any(|&i| i == "mod" || i == "*"),
+            call: v.iter().any(|&i| i == "call" || i == "*" || i == "all"),
+            jmp: v.iter().any(|&i| i == "jmp" || i == "*" || i == "all"),
+            ret: v.iter().any(|&i| i == "ret" || i == "*" || i == "all"),
+            mov: v.iter().any(|&i| i == "mov" || i == "*" || i == "all"),
+            lea: v.iter().any(|&i| i == "lea" || i == "*" || i == "all"),
+            cmp: v.iter().any(|&i| i == "cmp" || i == "*" || i == "all"),
+            neg: v.iter().any(|&i| i == "neg" || i == "*" || i == "all"),
+            and: v.iter().any(|&i| i == "and" || i == "*" || i == "all"),
+            or: v.iter().any(|&i| i == "or" || i == "*" || i == "all"),
+            xor: v.iter().any(|&i| i == "xor" || i == "*" || i == "all"),
+            shift: v.iter().any(|&i| i == "shift" || i == "*" || i == "all"),
+            mod_: v.iter().any(|&i| i == "mod" || i == "*" || i == "all"),
         }
     }
 
