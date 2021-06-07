@@ -1,9 +1,9 @@
 /target
 **/*.rs.bk
-
+rusty-tags.vi
 /c_src
-/evaluation
 /examples
 *~
 *.o
+*.s
 tmp*
