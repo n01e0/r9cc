@@ -16,7 +16,6 @@ args:
         - call
         - jmp
         - ret
-        - imm
         - mov
         - lea
         - cmp

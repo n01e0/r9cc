@@ -16,7 +16,6 @@ struct ObfuscateInst {
     call: bool,
     jmp: bool,
     ret: bool,
-    imm: bool,
     mov: bool,
     lea: bool,
     cmp: bool,
@@ -34,7 +33,6 @@ impl ObfuscateInst {
             call: v.iter().any(|&i| i == "call" || i == "*"),
             jmp: v.iter().any(|&i| i == "jmp" || i == "*"),
             ret: v.iter().any(|&i| i == "ret" || i == "*"),
-            imm: v.iter().any(|&i| i == "imm" || i == "*"),
             mov: v.iter().any(|&i| i == "mov" || i == "*"),
             lea: v.iter().any(|&i| i == "lea" || i == "*"),
             cmp: v.iter().any(|&i| i == "cmp" || i == "*"),
@@ -51,7 +49,6 @@ impl ObfuscateInst {
         self.call
             || self.jmp
             || self.ret
-            || self.imm
             || self.mov
             || self.lea
             || self.cmp
@@ -318,7 +315,7 @@ fn gen(f: Function, obfuscate_inst: &ObfuscateInst) {
         let rhs = ir.rhs.unwrap_or(0);
         match ir.op {
             Imm => {
-                if obfuscate_inst.imm {
+                if obfuscate_inst.mov {
                     emit!("sub rsp, 0x18");
                     emit!("push rax");
                     emit!("lea rax, .Lgadget_mov_{}", regs(lhs));
@@ -702,7 +699,7 @@ pub fn gen_x86(globals: Vec<Var>, fns: Vec<Function>, obfuscate_inst: Vec<&str>)
         println!(".text");
     }
 
-    if oi.imm || oi.mov {
+    if oi.mov {
         for i in 0..REGS_N {
             println!(".Lgadget_mov_{}:", regs(i));
             emit!("pop {}", regs(i));
