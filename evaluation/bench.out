@@ -1,0 +1,67 @@
+Benchmark #1: ./prime_call
+  Time (mean ± σ):      8.374 s ±  0.051 s    [User: 8.371 s, System: 0.001 s]
+  Range (min … max):    8.284 s …  8.457 s    10 runs
+
+Benchmark #2: ./prime_jmp
+  Time (mean ± σ):     10.218 s ±  0.037 s    [User: 10.214 s, System: 0.002 s]
+  Range (min … max):   10.132 s … 10.271 s    10 runs
+
+Benchmark #3: ./prime_ret
+  Time (mean ± σ):      8.287 s ±  0.046 s    [User: 8.285 s, System: 0.001 s]
+  Range (min … max):    8.194 s …  8.338 s    10 runs
+
+Benchmark #4: ./prime_imm
+  Time (mean ± σ):     36.395 s ±  0.580 s    [User: 36.387 s, System: 0.002 s]
+  Range (min … max):   35.845 s … 37.724 s    10 runs
+
+Benchmark #5: ./prime_mov
+  Time (mean ± σ):     112.350 s ±  0.143 s    [User: 112.332 s, System: 0.002 s]
+  Range (min … max):   112.085 s … 112.555 s    10 runs
+
+Benchmark #6: ./prime_lea
+  Time (mean ± σ):      8.204 s ±  0.041 s    [User: 8.203 s, System: 0.001 s]
+  Range (min … max):    8.125 s …  8.284 s    10 runs
+
+Benchmark #7: ./prime_cmp
+  Time (mean ± σ):     35.700 s ±  0.093 s    [User: 35.694 s, System: 0.002 s]
+  Range (min … max):   35.597 s … 35.857 s    10 runs
+
+Benchmark #8: ./prime_neg
+  Time (mean ± σ):      8.255 s ±  0.021 s    [User: 8.254 s, System: 0.001 s]
+  Range (min … max):    8.223 s …  8.287 s    10 runs
+
+Benchmark #9: ./prime_and
+  Time (mean ± σ):      8.236 s ±  0.030 s    [User: 8.235 s, System: 0.001 s]
+  Range (min … max):    8.201 s …  8.302 s    10 runs
+
+Benchmark #10: ./prime_or
+  Time (mean ± σ):      8.209 s ±  0.055 s    [User: 8.206 s, System: 0.001 s]
+  Range (min … max):    8.139 s …  8.289 s    10 runs
+
+Benchmark #11: ./prime_xor
+  Time (mean ± σ):      8.220 s ±  0.042 s    [User: 8.218 s, System: 0.001 s]
+  Range (min … max):    8.149 s …  8.275 s    10 runs
+
+Benchmark #12: ./prime_shift
+  Time (mean ± σ):      8.162 s ±  0.045 s    [User: 8.158 s, System: 0.001 s]
+  Range (min … max):    8.098 s …  8.230 s    10 runs
+
+Benchmark #13: ./prime_mod
+  Time (mean ± σ):     20.329 s ±  0.225 s    [User: 20.324 s, System: 0.002 s]
+  Range (min … max):   20.043 s … 20.711 s    10 runs
+
+Summary
+  './prime_shift' ran
+    1.01 ± 0.01 times faster than './prime_lea'
+    1.01 ± 0.01 times faster than './prime_or'
+    1.01 ± 0.01 times faster than './prime_xor'
+    1.01 ± 0.01 times faster than './prime_and'
+    1.01 ± 0.01 times faster than './prime_neg'
+    1.02 ± 0.01 times faster than './prime_ret'
+    1.03 ± 0.01 times faster than './prime_call'
+    1.25 ± 0.01 times faster than './prime_jmp'
+    2.49 ± 0.03 times faster than './prime_mod'
+    4.37 ± 0.03 times faster than './prime_cmp'
+    4.46 ± 0.08 times faster than './prime_imm'
+   13.76 ± 0.08 times faster than './prime_mov'
+
